@@ -106,7 +106,31 @@
     async function callApi(action, payload) { const response = await fetch(API_URL, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action, payload }) }); try { const result = await response.json(); if (result.status === 'error') { throw new Error(result.message); } return result.data; } catch (e) { if (response.ok) { return {}; } throw new Error('Ошибка сети или ответа сервера.'); } }
     function toggleButtonSpinner(btn, show) { if (show) { btn.disabled = true; btn.dataset.originalText = btn.innerHTML; btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>`; } else { btn.disabled = false; btn.innerHTML = btn.dataset.originalText; } }
     function showToast(message) { document.querySelector('#appToast .toast-body').textContent = message; appToast.show(); }
-    function handleLogin(e) { e.preventDefault(); const loginBtn = document.getElementById('login-button'); toggleButtonSpinner(loginBtn, true); const loginError = document.getElementById('login-error'); loginError.classList.add(HIDDEN_CLASS); const payload = { login: document.getElementById('username').value, password: document.getElementById('password').value }; callApi('login', payload).then(onLoginSuccess).catch(err => { onFailure(err, loginError); document.getElementById('password').value = ''; }).finally(() => { toggleButtonSpinner(loginBtn, false); }); }
+    function handleLogin(e) {
+    e.preventDefault();
+    const loginBtn = document.getElementById('login-button');
+    toggleButtonSpinner(loginBtn, true);
+    const loginError = document.getElementById('login-error');
+    loginError.classList.add(HIDDEN_CLASS);
+    const payload = {
+        login: document.getElementById('username').value,
+        password: document.getElementById('password').value
+    };
+
+    callApi('login', payload)
+        .then(data => {
+            // Если ошибки нет, считаем вход успешным.
+            // Используем логин из payload, а роль берем из ответа сервера.
+            onLoginSuccess({ login: payload.login, role: data.role });
+        })
+        .catch(err => {
+            onFailure(err, loginError);
+            document.getElementById('password').value = '';
+        })
+        .finally(() => {
+            toggleButtonSpinner(loginBtn, false);
+        });
+}
     function loadInitialData(startDateString, endDateString) { meetingsList.innerHTML = '<div class="col-12 text-center"><div class="spinner-border text-primary" role="status"></div></div>'; const payload = { login: currentUser, startDateString, endDateString }; callApi('getInitialData', payload).then(onDataLoaded).catch(onFailure); }
     function onDataLoaded(data) { allMeetings = data.meetings; questions = data.questions || []; potentialCategories = data.potentialCategories || []; populatePurposes(data.purposes); filterAndGroupMeetings(); }
     function populatePurposes(purposes) { const purposeSelect = document.getElementById('purpose'); purposeSelect.innerHTML = '<option value="">-- Выберите цель --</option>'; if (purposes && Array.isArray(purposes)) { purposes.forEach(p => { purposeSelect.innerHTML += `<option value="${p.Purpose}">${p.Purpose}</option>`; }); } }
